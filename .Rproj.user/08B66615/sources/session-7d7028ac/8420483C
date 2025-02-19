@@ -3,7 +3,7 @@
     "path": "~/learn/BIOS_master/BIOS_731/Homework/hw2/bios731_hw2_Ou/analysis/HW2_optimization-1.Rmd",
     "project_path": "analysis/HW2_optimization-1.Rmd",
     "type": "r_markdown",
-    "hash": "1131000236",
+    "hash": "1150045905",
     "contents": "",
     "dirty": false,
     "created": 1739892343106.0,
@@ -12,16 +12,16 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "15,13",
-        "scrollLine": "0",
+        "cursorPosition": "344,17",
+        "scrollLine": "331",
         "docOutlineVisible": "1"
     },
     "folds": "",
-    "lastKnownWriteTime": 1739972112,
+    "lastKnownWriteTime": 1739972486,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1739972112023,
+    "last_content_update": 1739972486895,
     "read_only": false,
     "read_only_alternatives": []
 }

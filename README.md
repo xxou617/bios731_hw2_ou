@@ -49,7 +49,7 @@ Xiaxian Ou
 
 *analysis*
 
-- Rmarkdown file to analyze the simulation results
+- Rmarkdown file to analyze the results
 - pdf file rendered from Rmarkdown
 
 *results*

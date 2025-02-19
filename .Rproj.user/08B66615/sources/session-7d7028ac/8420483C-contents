@@ -291,7 +291,7 @@ ggplot(beta0, aes(x = methods, y = iter.number, color = methods)) +
 ```
 
 
-```{r}
+```{r, message=FALSE}
 ggsave(plot_CI, file = here::here("results", "plot_CI.jpg"))
 ggsave(plot_time, file = here::here("results", "plot_time.jpg"))
 ggsave(plot_iter, file = here::here("results", "plot_iter.jpg"))
@@ -342,7 +342,7 @@ $$
 $$
 
 
-For the *E-step*, we have:
+For the **E-step**, we have:
 $$
 \begin{aligned}
 Q(\lambda|\lambda_0) 
