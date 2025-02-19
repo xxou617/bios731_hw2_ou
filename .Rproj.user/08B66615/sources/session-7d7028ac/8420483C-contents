@@ -54,7 +54,7 @@ For a given subject in a study, we are interested in modeling $\pi_i = P(Y_i = 1
 
 <br>
 
-$$\text{logit}(\pi_i) = \log \left(\frac{\pi_i}{1-\pi_i}\right) = \log\left({\frac{P(Y_i = 1|X_i)}{1-P(Y_i = 1|X_i)}}\right) = \beta_0 + \beta_1X_{1i} + \beta_2X_{2i} + \ldots + \beta_pX_{pi}$$
+$$\text{logit}(\pi_i) = \log \Big(\frac{\pi_i}{1-\pi_i}\Big) = \log\Big({\frac{P(Y_i = 1|X_i)}{1-P(Y_i = 1|X_i)}}\Big) = \beta_0 + \beta_1X_{1i} + \beta_2X_{2i} + \ldots + \beta_pX_{pi}$$
 
 * $Y_1, Y_2,\ldots, Y_n \sim Bernoulli(\pi)$ 
 * PDF is $f(y_i; \pi) = \pi^{y_i}(1-\pi)^{1-y_i}$
@@ -450,10 +450,7 @@ $$\Phi^{-1}(Pr[Y_i = 1 |X_i]) = X_i^T\beta,$$
 where $\Phi^{-1}$ is inverse of the CDF for the standard normal distribution.  **Are the expected and observed information equivalent for probit regression?** Justify why or why not.
 
 
-Yes,  the Hessian matrix does not depend on $Y_i$, and we can achieve $I(\beta) = - E[H]  = - H$
+No,  the Hessian matrix depends on $Y_i$, and we can achieve $I(\beta) = - E[H]  \ne - H$
 
-$$
-H(\beta)=-\sum_{i=1}^n X_i X_i^T \frac{\phi\left(X_i^T \beta\right)^2}{\Phi\left(X_i^T \beta\right)\left(1-\Phi\left(X_i^T \beta\right)\right)}
-$$
-
+For the probit model, $P_i=F\Big(X_i^{\prime} \beta\Big)$ where
 
