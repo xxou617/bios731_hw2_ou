@@ -288,6 +288,7 @@ ggplot(beta0, aes(x = methods, y = iter.number, color = methods)) +
        title = "Iteration number by Method") +
   theme_bw() + 
   theme(legend.position = "none") -> plot_iter
+plot_iter
 ```
 
 
@@ -450,7 +451,7 @@ $$\Phi^{-1}(Pr[Y_i = 1 |X_i]) = X_i^T\beta,$$
 where $\Phi^{-1}$ is inverse of the CDF for the standard normal distribution.  **Are the expected and observed information equivalent for probit regression?** Justify why or why not.
 
 
-No,  the Hessian matrix does not depend on $Y_i$, and we can achieve $I(\beta) = - E[H]  \ne - H$
+No,  the Hessian matrix does not depend on $Y_i$, and  $I(\beta) = - E[H]  \ne - H$
 
 For the probit model, $P_i=F\left(X_i^{\prime} \beta\right)$ where
 
