@@ -1,0 +1,3 @@
+"0","library(survival)"
+"0",""
+"0","time = veteran$time; censor_status = veteran$status"

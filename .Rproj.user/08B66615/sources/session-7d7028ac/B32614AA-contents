@@ -1,0 +1,441 @@
+#############################
+# DGP
+#############################
+generate_data <- function(n,
+                          Z.binary=as.logical(Sys.getenv("Z_binary")),
+                          Y.binary=as.logical(Sys.getenv("Y_binary")),
+                          # when Z is binary
+                          parZ.binary = c(-1,1,1),
+                          # when Z is continuous
+                          parZ.continuous = c(1,1,1)/4,
+                          parX=c(2,-1,1)/4,
+                          # when Y continuous
+                          parY.continuous=c(4,1,1/2,-1/2,-3/2,1,1),
+                          # when Y binary
+                          parY.binary=c(4,1,1/2,-1/2,-3/2,1,1)/8
+){
+  
+  parZ.binary = c(-1,1,1); parZ.continuous = c(1,1,1)/4; parX=c(2,-1,1)/4;  parY.continuous=c(4,1,1/2,-1/2,-3/2,1,1); parY.binary=c(4,1,1/2,-1/2,-3/2,1,1)/8
+  
+  
+  if (Z.binary){parZ <- parZ.binary} else {parZ <- parZ.continuous}
+  
+  if (Y.binary){parY <- parY.binary} else {parY <- parY.continuous}
+  
+  
+  C <- runif(n,0.1,1) # p(C)
+  
+  # W <- rbinom(n, 1, C/(1+C)) # p(W|C)
+  W <- rbinom(n,1,0.5)
+  
+  # p(Z|W,C)
+  if (Z.binary){ Z <- rbinom(n, 1, plogis(parZ[1]+parZ[2]*W+parZ[3]*C))} else {Z <- runif(n,0.1,(parZ[1]+parZ[2]*W+parZ[3]*C)) }
+  
+  X <- rbinom(n, 1, parX[1] + parX[2]*W + parX[3]*Z*W) # p(X|Z, W) it's linear link!
+  
+  # p(Y|Z,W,X,C)
+  if (Y.binary){ Y <- rbinom(n, 1, parY[1]+parY[2]*X+parY[3]*Z+parY[4]*Z*W +parY[5]*W+parY[6]*(1-W)*(1-X)*(1-Z)+parY[7]*C)} else {Y <- parY[1]+parY[2]*X+parY[3]*Z+parY[4]*Z*W+parY[5]*W + parY[6]*(1-W)*(1-X)*(1-Z) + parY[7]*C + runif(n,0,1)}
+  
+  
+  data <- data.frame(C=C, W=W, Z=Z, X=X, Y=Y)
+  
+  # propensity score
+  ps <- X*(parX[1] + parX[2]*W + parX[3]*Z*W) + (1-X)*(1-(parX[1] + parX[2]*W + parX[3]*Z*W))
+  
+  return(list(data = data,
+              Z.binary=Z.binary,
+              parZ = parZ,
+              parX=parX,
+              parY=parY,
+              Y.binary=Y.binary,
+              ps=ps))
+}
+
+# set.seed(7)
+# dat_output = generate_data(1000,Z.binary=FALSE,Y.binary=FALSE)
+# data = dat_output$data
+# attach(data,warn.conflicts = FALSE)
+# parZ = dat_output$parZ
+# Z.binary = dat_output$Z.binary
+# parX = dat_output$parX
+# parY = dat_output$parY
+# Y.binary = dat_output$Y.binary
+
+
+x=1; z = NULL; data=data; treatment="X"; Z.variables='Z'; W.variables='W'; outcome='Y'; covariates='C';
+z.density=NULL; z.method="dnorm"; superlearner.Y=F; superlearner.X=F; superlearner.Z=F;
+crossfit=F; K=5;
+lib.Y = c("SL.glm","SL.earth","SL.ranger","SL.mean");
+lib.X = c("SL.glm","SL.earth","SL.ranger","SL.mean");
+lib.Z = c("SL.glm","SL.earth","SL.ranger","SL.mean");
+n.iter=500; cvg.criteria=0.01;
+formula.Y="Y ~ C+X+Z*W+I((1-X)*(1-Z)*(1-W))"; formula.X="X ~ W+Z:W"; formula.Z="Z~W+C";
+linkY_binary="logit"; link.X="identity"; link.Z="logit";
+truncate_lower.X=0; truncate_upper.X=1;
+truncate_lower.Z=0; truncate_upper.Z=1;
+minZ=0.1; maxZ=0.75;
+verbose=T
+
+z.method <- function(Z.variables, W.variables, covariates){
+  
+  parZ <- c(1,1,1)/4
+  
+  z.density <- dunif(Z.variables,0.1,(parZ[1]+parZ[2]*W.variables+parZ[3]*covariates ) )
+  
+  return(z.density)
+  
+}
+
+sub.z.density <- function(z){
+  part1 <- 2*{log(0.4) - log((1+max(4*z-1,0))/4 - 0.1)}
+
+  part2 <- 2*{log(0.75-0.1) - log((2+max(4*z-2,0))/4-0.1)}
+
+  return((z<=0.5)*part1+part2)
+}
+
+z.density <- function(z){
+
+sapply(z,sub.z.density)
+
+}
+
+
+
+napkin.a <- function(x, z = NULL,data,treatment="X", Z.variables='Z', W.variables='W', outcome='Y', covariates='C',
+                     z.density=NULL, z.method="dnorm", superlearner.Y=F, superlearner.X=F,superlearner.Z=F,
+                     crossfit=F,K=5,
+                     lib.Y = c("SL.glm","SL.earth","SL.ranger","SL.mean"),
+                     lib.X = c("SL.glm","SL.earth","SL.ranger","SL.mean"),
+                     lib.Z = c("SL.glm","SL.earth","SL.ranger","SL.mean"),
+                     n.iter=500, cvg.criteria=0.01,
+                     formula.Y="Y ~ C+X+Z*W+I((1-X)*(1-Z)*(1-W))", formula.X="X ~ W+Z:W", formula.Z="Z~W+C",
+                     linkY_binary="logit", link.X="identity", link.Z="logit",
+                     truncate_lower.X=0, truncate_upper.X=1,
+                     truncate_lower.Z=0, truncate_upper.Z=1,
+                     minZ=-Inf,maxZ=Inf,
+                     verbose=T){
+  
+  
+  
+  n <- nrow(data)
+  
+  # Variables
+  C <- data[,covariates, drop = F]
+  X <- data[,treatment]
+  W <- data[,W.variables, drop=F]
+  Z <- data[,Z.variables]
+  Y <- data[,outcome]
+  
+  
+  # new data sets
+  dat_mpY = data.frame(X,Z,W, C)
+  dat_mpX = data.frame(Z,W, C)
+  dat_mpZ = data.frame(W, C)
+  dat_ZmpZ = data.frame(Z,W, C)
+  
+  binaryY <- all(Y %in% c(0,1))
+  binaryZ <- all(as.vector(Z) %in% c(0,1))
+  
+  
+  ################################################
+  ############### OUTCOME REGRESSION #############
+  ################################################
+    
+  fit.family <- if(binaryY){binomial(linkY_binary)}else{gaussian()} # family for super learner depending on whether Y is binary or continuous
+  
+  or_fit <- glm(as.formula(formula.Y), data=dat_mpY, family = fit.family)
+  
+  f.mu.xz <- function(x,z){
+    
+    dat_mpY.xz <- dat_mpY %>% mutate(Z=z, X=x)
+    
+    mu.Y.xz <- predict(or_fit, newdata=dat_mpY.xz, type="response")
+    
+    
+    return(mu.Y.xz)
+  }
+  
+  
+  f.mu.xzw <- function(x,z,w,c){
+    
+    dat_mpY.xz <- data.frame(Z=z, X=x, W=w, C=c)
+    
+    mu.Y.xz <- predict(or_fit, newdata=dat_mpY.xz, type="response")
+    
+    
+    return(mu.Y.xz)
+  }
+
+
+print("outcome regression done.")
+  
+  ################################################
+  ############### PROPENSITY SCORE ###############
+  ################################################
+  
+  
+  ps_fit <- glm(as.formula(formula.X), data=dat_mpX,  family = binomial(link.X))
+  
+  f.x.z <- function(x, z, truncate_lower, truncate_upper){
+    
+    dat_mpX.z <- dat_mpX %>% mutate(Z=z)
+    
+    p.x1.z <- predict(ps_fit, newdata=dat_mpX.z, type="response")
+    
+    # truncation
+    p.x1.z[p.x1.z < truncate_lower] <- truncate_lower
+    p.x1.z[p.x1.z > truncate_upper] <- truncate_upper
+    
+    p.x.z <- x*p.x1.z + (1-x)*(1-p.x1.z)
+    
+    return(p.x.z)
+    
+  } # end of function f.pi.z
+  
+  f.x.zw <- function(x, z,w, c, truncate_lower, truncate_upper){
+    
+    dat_mpX.z <- data.frame(Z=z, W=w, C=c)
+    
+    p.x1.z <- predict(ps_fit, newdata=dat_mpX.z, type="response")
+    
+    # truncation
+    p.x1.z[p.x1.z < truncate_lower] <- truncate_lower
+    p.x1.z[p.x1.z > truncate_upper] <- truncate_upper
+    
+    p.x.z <- x*p.x1.z + (1-x)*(1-p.x1.z)
+    
+    return(p.x.z)
+    
+  } # end of function f.pi.z
+  
+
+
+print("propensity score regression done.")
+  
+  
+  ################################################################
+  ############### f_Z(Z|W,C) Conditional density ###############
+  ################################################################
+    
+  ########## If Z is NOT binary ############
+  
+  
+  if (is.function(z.method)){
+    
+    # make prediction for p(Z_i|W_i,C_i)
+    p.z <- sapply(1:n, function(i) z.method(Z.variables = Z[i], W.variables = as.vector(W[i,]), covariates = as.vector(C[i,])) )
+    
+    # make prediction for p(Z_i|W_j,C_j) for both i and j from 1 to n, used for TMLE
+    
+    p.z.matrix <- matrix(NA, n, n)
+    for (i in 1:n) {
+      
+      for (j in 1:n) {
+        
+        p.z.matrix[j, i] <- z.method(Z.variables = Z[i],
+                                     W.variables = as.vector(W[j, ]),
+                                     covariates = as.vector(C[j, ]))
+      }
+    }
+    
+  }
+  
+
+
+print("Estimation for conditional density of Z completed.")
+  
+  
+  
+  #############################################
+  ############### p(Z) density ###############
+  #############################################
+  
+  if (is.null(z.density)){
+    
+    den.zi <- density(Z)
+    
+    p.zi <- approx(den.zi$x, den.zi$y, xout = Z)$y
+    
+  }else{
+    
+    p.zi <- sapply(Z, z.density)
+    
+  }
+  
+  
+  print("Estimation/Evaluation for p(Z) completed.")
+  
+  ##################################################################
+  #################### One-step estimator ##########################
+  ##################################################################
+
+  ### Non-binary Z ###
+  f.onestep.x_nonbinaryZ <- function(x, truncate_lower.X, truncate_upper.X ,truncate_lower.Z, truncate_upper.Z, p.z){ # one-step estimate and its EIF
+    
+    # nuisance parameters
+    p.x.z <- f.x.z(x, Z, truncate_lower.X, truncate_upper.X) # propensity score p(X=x | Z,W)
+    mu.xz <- f.mu.xz(x, Z) # outcome regression mu(X=x, Z, W, C)
+    
+    phi1 <- sapply(1:n, function(i) mean(f.x.z(x, Z[i], truncate_lower.X, truncate_upper.X)*f.mu.xz(x, Z[i]) )) # numerator of the plugin estimator: (1/n) * sum_i p(X=x | Z=z,W_i) mu(X=x, Z=z, W_i, C_i) for z from Z_1 to Z_n
+    phi2 <- sapply(1:n, function(i) mean(f.x.z(x, Z[i], truncate_lower.X, truncate_upper.X) )) # denominator of the plugin estimator: (1/n) * sum_i p(X=x | Z=z,W_i) for z from Z_1 to Z_n
+    
+    plugin.est <- phi1/phi2 # plug-in estimate
+    
+    
+    # EIF
+    EIF.Y <- {(X==x)*(p.zi)}/{phi2*p.z}*(Y-mu.xz) # EIF for Y
+    EIF.X <- (p.zi)/{phi2*p.z}*(mu.xz-plugin.est)*( (X==x) - p.x.z ) # EIF for X
+    
+    if (!is.null(z.density)){ ## if p(Z) is provided
+      
+      integrand.wc <- function(z,w,c){ ## integrand for EIF of W
+        
+        phi1.z <- sapply(z, function(zi) mean(f.x.z(x, zi, truncate_lower.X, truncate_upper.X)*f.mu.xz(x, zi) ))
+        phi2.z <- sapply(z, function(zi) mean(f.x.z(x, zi, truncate_lower.X, truncate_upper.X)))
+        
+        plugin.est.z <- phi1.z/phi2.z
+        
+        int.w <- z.density(z)*{f.x.zw(x, z, w,c, truncate_lower.X, truncate_upper.X)/phi2.z*(f.mu.xzw(x, z,w,c) - plugin.est.z)}
+        
+        return(int.w)
+        
+      }
+      
+      
+      f.plugin.wc <- function(z){ ## integrand for getting the pluging estimator
+        
+        phi1.z <- sapply(z, function(zi) mean(f.x.z(x, zi, truncate_lower.X, truncate_upper.X)*f.mu.xz(x, zi) ))
+        phi2.z <- sapply(z, function(zi) mean(f.x.z(x, zi, truncate_lower.X, truncate_upper.X)))
+        
+        plugin.est.z <- phi1.z/phi2.z
+        
+        int.w1 <- z.density(z)*plugin.est.z
+        
+        return(int.w1)
+        
+      }
+      
+      EIF.W <- unlist(lapply(1:n, function(i) integrate(integrand.wc, lower = minZ, upper = maxZ, w=W[i,],c=C[i,])$value))
+      
+      plugin.est <- integrate(f.plugin.wc, lower = minZ, upper = maxZ)$value
+      
+      if(verbose){print("Density function of Z is provided. Influence function and plug-in estimator computed using the given density function of Z.")}
+      
+    }else{ ## if p(Z) is not provided
+      
+      EIF.W <- Reduce(`+`, lapply(1:n, function(i) f.x.z(x, Z[i], truncate_lower.X, truncate_upper.X)/phi2[i]*(f.mu.xz(x, Z[i]) - plugin.est[i])) )/n
+      
+      if(verbose){print("Density function of Z is not provided. Influence function and plug-in estimator computed via density estimation.")}
+      
+    }
+    
+    
+    estimated <- mean(EIF.Y+EIF.X+EIF.W) + mean(plugin.est)
+    
+    if (!is.null(z.density)){
+      
+      EIF <- EIF.Y + EIF.X + EIF.W
+      
+      if(verbose){print("Density function of Z is provided. Influence function equals 0 at the tangent space of Z")}
+      
+    }else{
+      
+      EIF <- EIF.Y + EIF.X + EIF.W + plugin.est - mean(plugin.est)
+      
+      if(verbose){print("Density function of Z is provided. Influence function equals plug-in estimator at all observed Z minus average of the plug-in")}
+      
+    }
+    
+    
+    # confidence interval
+    lower.ci <- estimated-1.96*sqrt(mean(EIF^2)/n)
+    upper.ci <- estimated+1.96*sqrt(mean(EIF^2)/n)
+    
+    return(list(estimated=estimated, EIF=EIF, EIF.Y=EIF.Y, EIF.X=EIF.X, EIF.W=EIF.W, lower.ci=lower.ci, upper.ci=upper.ci))
+    
+    
+  }
+  
+  # if Z is binary, return three one-step estimators:
+  # 1. at Z=1
+  # 2. at Z=0
+  # 3. average of the two
+  
+  
+  if(verbose){print(paste0('Z is continuous. Computing one-step estimator at the ',ifelse(!is.null(z.density),'given','estimated'),' density function of Z.'))}
+  
+  out.all.z <- f.onestep.x_nonbinaryZ(x, truncate_lower.X, truncate_upper.X ,truncate_lower.Z, truncate_upper.Z, p.z)
+  
+  onestep.out <- list(out.all.z=out.all.z)
+
+  
+  # 
+  # tmle.out <- onestep.out
+  # 
+  # 
+  # 
+  # ## if Z is univariate binary, return
+  # # 1. one-step estimator
+  # # 2. TMLE estimator
+  # # 3. estimated equation
+  # 
+  # ## if Z is not univariate binary, return 1 and 2 only because the estimating equation aligns with the one-step estimator
+  # out <- list(Onestep=onestep.out, TMLE=tmle.out)
+  
+  return(onestep.out)
+  
+  
+  
+  
+}
+
+
+
+##################
+# multiple simulation
+##################
+set.seed(7)
+
+nsim=500
+n=1000
+
+est.vec <- rep(NA,nsim)
+var.vec <- rep(NA,nsim)
+
+for (i in 1:nsim){
+  
+  cat(i, "\n")
+  
+  data <- generate_data(n, Z.binary=F, Y.binary=F)$data
+  
+  z.method <- function(Z.variables, W.variables, covariates){
+    
+    parZ <- c(1,1,1)/4
+    
+    z.density <- dunif(Z.variables,0.1,(parZ[1]+parZ[2]*W.variables+parZ[3]*covariates ) )
+    
+    return(z.density)
+    
+  }
+  
+  out <- napkin.a(x=1, z = NULL,data=data,treatment="X", Z.variables='Z', W.variables='W', outcome='Y', covariates='C',
+                              z.density=NULL, z.method=z.method, superlearner.Y=F, superlearner.X=F,superlearner.Z=F,
+                              crossfit=F,K=5,
+                              lib.Y = c("SL.glm","SL.earth","SL.ranger","SL.mean"),
+                              lib.X = c("SL.glm","SL.earth","SL.ranger","SL.mean"),
+                              lib.Z = c("SL.glm","SL.earth","SL.ranger","SL.mean"),
+                              n.iter=500, cvg.criteria=0.01,
+                              formula.Y="Y ~ C+X+Z*W+I((1-X)*(1-Z)*(1-W))", formula.X="X ~ W+Z:W", formula.Z="Z~W+C",
+                              linkY_binary="logit", link.X="identity", link.Z="logit",
+                              truncate_lower.X=0, truncate_upper.X=1,
+                              truncate_lower.Z=0, truncate_upper.Z=1,
+                              minZ=-Inf,maxZ=Inf,
+                              verbose=F)
+  
+  est.vec[i] <- out$out.all.z$estimated
+  var.vec[i] <- mean(out$out.all.z$EIF^2)/n
+  
+  
+}
+

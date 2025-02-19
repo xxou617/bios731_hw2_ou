@@ -1,0 +1,87 @@
+# function for EM algorithm for censored exponential data
+EM_censored_exp <- function(lambda_init = 100, time, censor_status, 
+                            max_iterations = 100, tol_criteria = Inf, tol = .0001){
+  
+  # initial
+  lambda = lambda_init
+  iter = 1
+  n = length(time)
+  observed_ll = rep(NA, length = max_iterations)
+  
+  
+  # Process
+  while(iter < max_iterations  & tol_criteria > tol){
+    
+    # *******************************
+    ## E-step
+    # *******************************
+    expected_z = ifelse(censor_status == 1, time, time + lambda)
+    
+    
+    # *******************************
+    ## M-step
+    # *******************************
+    lambda = (1 / n) * sum(expected_z)
+   
+    
+    # *******************************
+    ## define  observed data log likelihood at current iteration
+    observed_ll[iter] = sum(- censor_status * log(lambda) - (time / lambda))
+    
+    if(iter > 1){
+      tol_criteria = observed_ll[iter] - observed_ll[iter-1]
+    }
+    
+    message(paste0("iteration: ", iter, "; tol_criteria: ", round(tol_criteria, 4)))
+    iter = iter + 1
+  }
+  
+  
+  return(list(solution = lambda, 
+              log_likelihood = observed_ll[1:(iter - 1)],
+              n_iter = iter -1))
+  
+}
+
+
+
+# bootstrapping for EM 
+EM_boot <- function(time, censor_status, nboot = 50, lambda_init = 100,  
+                    max_iterations = 100, tol_criteria = Inf, tol = .0001, alpha = 0.05){
+  n = length(time)
+  lambda_vec = rep(NA, nboot)
+  
+  for (i in seq_len(nboot)) {
+    
+    # *******************************
+    ## get boot sample
+    
+    index = sample(seq_len(n), n, replace = T)
+    boot_time = time[index]
+    boot_censor_status = censor_status[index]
+    
+    
+    # *******************************
+    ## EM estimate
+    
+    EM_est <-  EM_censored_exp(lambda_init = lambda_init,
+                               time = boot_time, 
+                               censor_status = boot_censor_status, 
+                               max_iterations, tol_criteria, tol)
+    
+    
+    lambda_vec[i] = EM_est$solution
+  }
+  
+  # *******************************
+  #  result
+  # *******************************
+  
+ 
+   
+  return(list( CI = quantile(lambda_vec, c(alpha/2, 1-alpha/2)),
+               SE = sd(lambda_vec)
+               )
+         )
+}
+

@@ -1,0 +1,4 @@
+"0","ggsave(plot_CI, file = here::here(""results"", ""plot_CI.jpg""))"
+"2","[38;5;239mSaving 7 x 7 in image[39m"
+"0","ggsave(plot_time, file = here::here(""results"", ""plot_time.jpg""))"
+"0","ggsave(plot_iter, file = here::here(""results"", ""plot_iter.jpg""))"

@@ -1,0 +1,8 @@
+"0","ggplot(beta0, aes(x = methods, y = times, color = methods)) +"
+"0","  geom_point(size = 3) +  "
+"0","  labs(x = ""Methods"", y = ""time (s)"", "
+"0","       title = ""Computation Time by Method"") +"
+"0","  theme_bw() + "
+"0","  theme(legend.position = ""none"") -> plot_time"
+"0",""
+"0","plot_time"

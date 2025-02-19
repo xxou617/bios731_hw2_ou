@@ -1,0 +1,6 @@
+"0","ggplot(beta0, aes(x = methods, y = iter.number, color = methods)) +"
+"0","  geom_point(size = 3) +  "
+"0","  labs(x = ""Methods"", y = ""Iteration number"", "
+"0","       title = ""Iteration number by Method"") +"
+"0","  theme_bw() + "
+"0","  theme(legend.position = ""none"") -> plot_iter"

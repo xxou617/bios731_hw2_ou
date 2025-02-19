@@ -1,0 +1,99 @@
+---
+title: "Lab: gradient methods"
+subtitle: "BIOS 731: Advanced Statistical Computing"
+author: "Julia Wrobel"
+output:
+  html_document: 
+    code_folding: hide
+    toc: true
+    toc_float: true
+hitheme: tomorrow
+highlighter: highlight.js
+---
+
+```{r, echo= FALSE, include = FALSE}
+library(tidyverse)
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 7,
+  fig.height = 5
+)
+
+theme_set(theme_bw() + theme(legend.position = "bottom"))
+```
+
+
+
+
+## **Exercise 1**: MM for sample median
+
+The code below performs implements an MM algorithm for finding the sample median.  Simulate data with a true median of $\theta$. Compare the MM algorithm with the median value obtained using `median()`
+**note**: you will need to choose an initial value for $\theta$.
+
+
+- you may note that the MM value is different from that obtained using `median()`. Why?
+
+
+
+
+```{r, eval = FALSE}
+iter = 1
+tol_criteria = Inf
+
+# define vectors to store elements of interest
+max_iter = 100
+tol = 0.00000001
+objective = theta_vec = rep(NA, length = max_iter)
+
+
+
+####
+## Add initial value
+
+theta = theta0
+
+while(iter < max_iter  & tol_criteria > tol){
+
+  ###############################################################
+  ## Majorization
+  ###############################################################
+
+  objective[iter] = 1/2 *sum((y-theta)^2/abs(y-theta) + abs(y-theta))
+  w = 1/abs(y-theta)
+
+  ###############################################################
+  ## Minimization
+  ###############################################################
+
+  theta = sum(w * y)/sum(w)
+  m[iter] = theta
+  ###############################################################
+
+  if(iter > 1){
+    tol_criteria = abs(objective[iter] - objective[iter-1])
+  }
+  iter = iter + 1
+  message(paste0("iteration: ", iter, "; ll: ", round(tol_criteria, 4)))
+}
+```
+
+
+
+## **Exercise 2**: MM for Bradley-Terry ranking
+
+The `baseball` dataset has baseball results for 7 teams from the 1987 season.   
+
+```{r}
+library(BradleyTerry2)
+
+data(baseball)
+head(baseball)
+```
+
+
+Modify code above to implement solution to Bradley-Terry ranking. Estimate the Ranking comparing Milwaukee to New York and Milwaukee to Boston.
+
+

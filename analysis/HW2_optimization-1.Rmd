@@ -1,0 +1,459 @@
+---
+title: 'Homework 2'
+header-includes:
+  - \usepackage{multirow}
+output:
+  pdf_document: default
+urlcolor: blue
+---
+
+```{r, include=FALSE}
+
+library(tidyverse)
+knitr::opts_chunk$set(tidy = FALSE)
+```
+
+github link:[https://github.com/xxou617/bios731_hw2_ou](https://github.com/xxou617/bios731_hw2_ou)
+
+## Context
+
+This assignment reinforces ideas in Module 2: Optimization. We focus specifically on implementing the Newton's method, EM, and MM algorithms.
+
+
+## Due date and submission
+
+Please submit (via Canvas) a PDF containing a link to the web address of the GitHub repo containing your work for this assignment; git commits after the due date will cause the assignment to be considered late. Due date is Wednesday, 2/19 at 10:00AM.
+
+
+
+## Points
+
+```{r, echo = FALSE}
+tibble(
+  Problem = c("Problem 0", "Problem 1", "Problem 2 ", "Problem 3", "Problem 4"),
+  Points = c(15, 30, 5, 30, 20)
+) %>%
+  knitr::kable()
+```
+
+
+## Problem 0 
+
+This “problem” focuses on structure of your submission, especially the use git and GitHub for reproducibility, R Projects to organize your work, R Markdown to write reproducible reports, relative paths to load data from local files, and reasonable naming structures for your files.
+
+To that end:
+
+* create a public GitHub repo + local R Project; I suggest naming this repo / directory bios731_hw2_YourLastName (e.g. bios731_hw2_wrobel for Julia)
+* Submit your whole project folder to GitHub 
+* Submit a PDF knitted from Rmd to Canvas. Your solutions to the problems here should be implemented in your .Rmd file, and your git commit history should reflect the process you used to solve these Problems.
+
+
+## Algorithms for logistic regression 
+
+For a given subject in a study, we are interested in modeling $\pi_i = P(Y_i = 1|X_i = x_i)$, where $Y_i \in \{0, 1\}$. The logistic regression model takes the form
+
+<br>
+
+$$\text{logit}(\pi_i) = \log \left(\frac{\pi_i}{1-\pi_i}\right) = \log\left({\frac{P(Y_i = 1|X_i)}{1-P(Y_i = 1|X_i)}}\right) = \beta_0 + \beta_1X_{1i} + \beta_2X_{2i} + \ldots + \beta_pX_{pi}$$
+
+* $Y_1, Y_2,\ldots, Y_n \sim Bernoulli(\pi)$ 
+* PDF is $f(y_i; \pi) = \pi^{y_i}(1-\pi)^{1-y_i}$
+
+### Problem 1: Newton's method
+
+
+- Derive likelihood, gradient, and Hessian for logistic regression for an arbitrary number of predictors $p$
+- What is the Newton's method update for $\beta$ for logistic regression?
+
+
+- Is logistic regression a convex optimization problem? Why or why not?
+
+
+
+
+
+
+$$
+\pi_i  = expit(X_i^T\beta) = \frac{\exp(X_i^T\beta)}{1 + \exp(X_i^T\beta)} = \frac{1}{1 + \exp(-X_i^T\beta)}, \quad X_i = [X_{1i}, X_{2i}, \ldots, X_{pi}]^T \\
+$$
+
+**likelihood**:
+$$
+\begin{aligned}
+L(\beta) &= \prod_i^n f(y_i;\pi)  =  \prod_i^n \pi_i^{y_i}(1-\pi_i)^{1 - y_i} = \prod_i^n(\frac{\pi_i}{1- \pi_i})^{y_i}  (1-\pi_i)\\
+& = \prod_i^n \exp(X_i^T\beta y_i)(1 + \exp(X_i^T\beta))^{-1}
+\end{aligned}
+$$
+
+Thus the **log-likelihood** is:
+
+$$
+l(\beta) = \log(L(\beta)) = \sum_i^n \Big(y_i\log(\pi_i) + y_i \log(1-\pi_i) \Big) = \sum_i^n (X_i^T\beta y_i - \log(1 + \exp(X_i^T\beta))
+$$
+
+**gradient**:
+
+$$
+\nabla l(\beta)  = \sum_{i=1}^{n}  \Big(y_i - \big(1 + \exp(- X_i^T\beta) \big)^{-1}\Big) X_i = \sum_{i=1}^{n}  (y_i - \pi_i)X_i
+$$
+
+**Hessian**:
+
+$$
+H = \nabla^2 l(\beta) = -\sum_{i=1}^{n}(1 + \exp(- X_i^T\beta) \big)^{-2}\exp(- X_i^T\beta)X_i = -\sum_{i=1}^{n} \pi_i (1 - \pi_i) X_i X_i^T
+$$
+
+**Newton’s method update**
+
+$$
+\beta_{t+1} = \beta_t - H^{-1}\nabla l(\beta)
+$$
+
+**a convex optimization problem**
+Yes, logistic regression is a convex optimization problem because the log-likelihood function is concave in $\beta$ and the Hessian matrix  is negative semi-definite, ensuring a unique global maximum.
+
+
+### Problem 2: MM
+
+(A) In constructing a minorizing function, first prove the inequality
+
+$$-\log\{1 + \exp{x_i^T\theta}\} \ge -\log\{1 + \exp(X_i^T\theta^{(k)})\} - \frac{\exp(X_i^T\theta) - \exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}$$
+with equality when $\theta = \theta^{(k)}$. This eliminates the log terms.
+
+
+if $f(s)$ is convex and differentiable,
+$$
+f(s) \geq f(t) + \nabla f(t)^T(s-t)
+$$
+and equality holds when $s = t$.
+
+
+Here let $f(s) = -\log(s)$, which is convex and differentiable,  $s = 1 + \exp(X_i^T\theta)$ and $t = 1 + \exp(X_i^T\theta^{(k)})$, we can get 
+
+$$
+-\log\{1 + \exp({x_i^T\theta})\} \ge  -\log\{1 + \exp(X_i^T\theta^{(k)})\}  - \frac{\exp(X_i^T\theta) - \exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}
+$$
+with equality when $\theta = \theta^{(k)}$
+
+
+(B) Now apply the arithmetic-geometric mean inequality to the exponential function $\exp(X_i^T\theta)$ to separate the parameters. Assuming that $\theta$ has $p$ components and that there are $n$ observations, show that these maneuvers lead to a minorizing function
+
+$$g(\theta|\theta^{(k)}) = -\frac{1}{p}\sum_{i = 1}^n \frac{\exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}\sum_{j = 1}^p\exp\{pX_{ij}(\theta_j-\theta_j^{(k)})\} + \sum_{i = 1}^nY_iX_i^T\theta = 0$$
+
+up to a constant that does not depend on $\theta$.
+
+
+
+
+
+According to problem 1, we have the log-likelihood of logistic regression:
+$$
+l(\beta) =  \sum_i^n (Y_i X_i^T \theta - \log(1 + \exp(X_i^T \theta))
+$$
+
+for  $\exp(X_i^T \theta)$:
+$$
+ \exp(X_i^T \theta) 
+ = \exp \Big(\sum_{j=1}^p X_{ij} \theta_j \Big) 
+ = \exp \Big(\sum_{j=1}^p X_{ij} \theta^{(k)}_j \Big) \exp \Big(\sum_{j=1}^p X_{ij}(\theta_j- \theta^{(k)}_j)\Big)
+$$
+
+
+By **Arithmetic-geometric mean inequality**:
+$$
+\exp \Big(\sum_{j=1}^p X_{ij}(\theta_j- \theta^{(k)}_j)\Big) \leq \frac{1}{p} \sum_{j=1}^p \exp\Big( pX_{ij}(\theta_j- \theta^{(k)}_j)\Big)
+$$
+
+$$
+\begin{aligned}
+- \frac{\exp(X_i^T\theta) - \exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}
+& = - \frac{\exp(X_i^T\theta)}{1 + \exp(X_i^T\theta^{(k)})} + \frac{\exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}\\
+& \ge  - \frac{\exp \Big(\sum_{j=1}^p X_{ij} \theta^{(k)}_j \Big)}{1 + \exp(X_i^T\theta^{(k)})}\frac{1}{p} \sum_{j=1}^p \exp\Big( pX_{ij}(\theta_j- \theta^{(k)}_j)\Big) + \frac{\exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}
+\end{aligned}
+$$
+Sum over all observations,
+$$
+\begin{aligned}
+g(\theta|\theta^{(k)}) 
+& = -\frac{1}{p}\sum_{i = 1}^n \frac{\exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}\sum_{j = 1}^p\exp\{pX_{ij}(\theta_j-\theta_j^{(k)})\} + \sum_{i = 1}^nY_iX_i^T\theta \\
+& \le - \sum_{i = 1}^n \frac{\exp(X_i^T\theta) - \sum_{i = 1}^n \exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})} - \sum_{i = 1}^n\frac{\exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})} + \sum_{i = 1}^nY_iX_i^T\theta \\
+& \le \sum_{i = 1}^n \log\{1 + \exp(X_i^T\theta^{(k)})\} -\sum_{i = 1}^n \log\{1 + \exp({x_i^T\theta})\} + \sum_{i = 1}^nY_iX_i^T\theta - \sum_{i = 1}^n\frac{\exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})} \\
+& = l(\theta) + \sum_{i = 1}^n \log\{1 + \exp(X_i^T\theta^{(k)})\} - \sum_{i = 1}^n\frac{\exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}
+\end{aligned}
+$$
+
+Here, $\sum_{i = 1}^n \log\{1 + \exp(X_i^T\theta^{(k)})\} - \sum_{i = 1}^n\frac{\exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}$ does not depend on $\theta$.
+
+
+(C) Finally, prove that maximizing $g(\theta|\theta^{(k)})$ consists of solving the equation
+
+$$ -\sum_{i = 1}^n \frac{\exp(X_i^T\theta^{(k)})X_{ij}\exp(-pX_{ij}\theta_j^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}\exp(pX_{ij}\theta_j) + \sum_{i = 1}^nY_iX_{ij} = 0$$
+
+for each $j$.
+
+To maximize $g(\theta|\theta^{(k)})$, 
+$$
+\begin{aligned}
+\frac{\partial g(\theta|\theta^{(k)})}{\partial \theta_j} 
+&=  -\frac{1}{p}\sum_{i = 1}^n \frac{\exp(X_i^T\theta^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}\sum_{j = 1}^p \frac{\partial}{\partial \theta_j}\exp\{pX_{ij}(\theta_j-\theta_j^{(k)})\} + \frac{\partial}{\partial \theta_j}\sum_{i = 1}^nY_iX_i^T\theta \\
+& = -\sum_{i = 1}^n \frac{\exp(X_i^T\theta^{(k)})X_{ij}\exp(-pX_{ij}\theta_j^{(k)})}{1 + \exp(X_i^T\theta^{(k)})}\exp(pX_{ij}\theta_j) + \sum_{i = 1}^nY_iX_{ij} \\
+& = 0
+\end{aligned}
+$$
+
+Thus, we need to solve the $\frac{\partial g(\theta|\theta^{(k)})}{\partial \theta_j} = 0$ to maximize $g(\theta|\theta^{(k)})$
+
+
+
+
+### Problem 3: simulation
+
+Next we will implement logistic regression in R four different ways and compare the results using a short simulation study.
+
+
+- implement using Newton's method from 1.1 in R
+- implement using MM from 1.2 in R
+- implement using `glm()` in R
+- implement using `optim()` in R:
+  - Use the option `method = "BFGS"`, which implements a Quasi-Newton approach
+
+
+
+Simulation study specification:
+
+- simulate from the model $logit(P(Y_i = 1|X_i)) = \beta_0 + \beta_1X_i$
+  - $\beta_0 = 1$
+  - $\beta_1 = 0.3$
+  - $X_i \sim N(0, 1)$
+  - $n = 200$
+  - $nsim = 1$
+- For your implementation of MM and Newton's method, select your own starting value and stopping criterion, but make sure they are the same for the two algorithms
+
+Set starting values at 0.5 for $\beta_0$ and $\beta_1$ and use the difference of updated beta as stopping criterion.
+
+You only need to run the simulation using **one simulated dataset**.  For each of the four methods, report:  
+
+  - $\hat{\beta}_0$, $\hat{\beta}_1$
+  - 95% confidence intervals for $\hat{\beta}_0$, $\hat{\beta}_1$
+  - computation time
+  - number of iterations to convergence
+
+
+Make 2-3 plots or tables comparing your results, and summarize these findings in one paragraph.
+
+```{r}
+library(ggplot2)
+library(gt)
+
+load(here::here("data", "simu_out.Rdata"))
+```
+
+```{r}
+beta0 <- simu_out |> filter(beta == "est_beta0"); gt(beta0)
+beta1 <- simu_out |> filter(beta == "est_beta1"); gt(beta1)
+```
+
+
+```{r, fig.align='center', fig.height=3, fig.width=6}
+ggplot(simu_out, aes(x = methods, y = estimate, color = methods)) +
+  geom_point(size = 3) +  # Points for estimates
+  geom_errorbar(aes(ymin = CI.lower, ymax = CI.up), width = 0.2) +  # Error bars
+  facet_wrap( ~ beta) +  
+  geom_hline(aes(yintercept = ifelse(beta == "est_beta0", 1.0, 0.3)), 
+             color = "red", linetype = "dashed") +  # Reference line
+  labs(x = "Methods", y = "Estimate", title = "Estimates by Method with Confidence Intervals") +
+  theme_bw() + 
+  theme(legend.position = "none") -> plot_CI
+
+plot_CI
+```
+
+
+```{r, fig.align='center', fig.height=3, fig.width=4}
+ggplot(beta0, aes(x = methods, y = times, color = methods)) +
+  geom_point(size = 3) +  
+  labs(x = "Methods", y = "time (s)", 
+       title = "Computation Time by Method") +
+  theme_bw() + 
+  theme(legend.position = "none") -> plot_time
+
+plot_time
+```
+
+
+```{r, fig.align='center', fig.height=3, fig.width=4}
+ggplot(beta0, aes(x = methods, y = iter.number, color = methods)) +
+  geom_point(size = 3) +  
+  labs(x = "Methods", y = "Iteration number", 
+       title = "Iteration number by Method") +
+  theme_bw() + 
+  theme(legend.position = "none") -> plot_iter
+```
+
+
+```{r}
+ggsave(plot_CI, file = here::here("results", "plot_CI.jpg"))
+ggsave(plot_time, file = here::here("results", "plot_time.jpg"))
+ggsave(plot_iter, file = here::here("results", "plot_iter.jpg"))
+```
+
+**Summary**:
+
+This simulation compares four optimization methods—Newton, MM, GLM, and Quasi-Newton—for estimating $\beta$ in a logistic regression model. All methods produced similar estimates and similar confidence intervals, and Newton has the same reults as GLM. There were significant differences in computational efficiency. The MM algorithm required 72 iterations, making it the slowest (0.167 seconds), whereas Newton (4 iterations, 0.030s), GLM (4 iterations, 0.005s), and Quasi-Newton (13 iterations, 0.022s) were notably faster. 
+
+
+## Problem 4: EM algorithm for censored exponential data
+
+This will be a continuation of the lab problem on EM for censored exponential data. Suppose we have survival times $t_1, \ldots, t_n \sim Exponential(\lambda)$. 
+
+* Do not observe all survival times because some are censored at times $c_1, \ldots, c_n$.  
+* Actually observe $y_1, \ldots, y_n$, where $y_i = min(y_0, c_i)$
+  * Also have an indicator $\delta_i$ where $\delta_i = 1$ is $y_i \le c_i$
+    * i.e. $\delta_i = 1$ if not censored and $\delta_i = 0$ if censored
+    
+Do the following:
+
+* Derive an EM algorithm to estimate the parameter $\lambda$.  Show your derivation here and report updates for the **E-step** and **M-Step**.
+* Implement your EM in R and fit it to the `veteran` dataset from the `survival` package.  
+  * Report your fitted $\lambda$ value. How did you monitor convergence?
+  * Report a 95% confidence interval for $\lambda$, and explain how it was obtained.
+  * Compare 95% confidence interval and results from those obtained by fitting an accelerated failure time model (AFT) in R with exponential errors.  You can fit an AFT model using the `survreg()` function from the `survival` package.  If you choose `dist = "weibull` and `shape = 1` as parameter arguments, this will provide exponential errors.
+
+
+**Derivation**
+
+$t_1, \ldots, t_n \sim Exp(\lambda)$, $y_i = min(t_i, c_i)$, then $\delta_i = 1$ if $y_i \leq c_i$ else $\delta_i = 0$, thus $t_i = \delta_i y_i +(1-\delta_i)z_i$ where $z_i$ can be denoted as the complete survival time.
+
+
+$$
+\begin{aligned}
+p(t|\lambda) & = \frac{1}{\lambda}\exp(-t/\lambda)\\
+p(y_i, t_i | \lambda) & = \frac{1}{\lambda}\exp\{-(\delta_i y_i +(1-\delta_i)z_i)/\lambda\}
+\end{aligned}
+$$
+
+Thus:
+$$
+\begin{aligned}
+\log(p(y_1, \ldots y_n, t_1, \ldots t_n | \lambda)) 
+& = \sum_i^n[-\log(\lambda)-\frac{1}{\lambda}\big(\delta_i y_i +(1-\delta_i)z_i \big)] \\
+& = -n\log(\lambda)-\frac{1}{\lambda}\sum_i^n\big(\delta_i y_i +(1-\delta_i)z_i \big)
+\end{aligned}
+$$
+
+
+For the *E-step*, we have:
+$$
+\begin{aligned}
+Q(\lambda|\lambda_0) 
+& = E[-n\log(\lambda)-\frac{1}{\lambda}\sum_i^n\big(\delta_i y_i +(1-\delta_i)z_i \big)|{\bf y}, \lambda_0 ] \\
+& = -n\log(\lambda)-\frac{1}{\lambda}\sum_i^nE\big[\delta_i y_i +(1-\delta_i)z_i | {\bf y}, \lambda_0 \big]
+\end{aligned}
+$$
+
+Due to the memoryless property of the exponential distribution:
+
+$$
+Q(\lambda|\lambda_0)  = -n\log(\lambda)-\frac{1}{\lambda}\sum_i^n \big[\delta_i y_i +(1-\delta_i)(\lambda_0 + c_i) ]
+$$
+
+
+For the **M-step** to maximize the $Q(\lambda|\lambda_0)$:
+
+$$
+\begin{aligned}
+ - \frac{n}{\lambda} & + \frac{1}{\lambda^2} \sum_i^n \big[\delta_i y_i +(1-\delta_i)(\lambda_0 + c_i) ] = 0 \\
+& \hat{\lambda} = \frac{1}{n} \sum_i^n \big[\delta_i y_i +(1-\delta_i)(\lambda_0 + c_i) ]
+\end{aligned}
+$$
+Then updata $\lambda_0 = \hat{\lambda}$ and repeat E-step.
+
+
+
+**Implementation:**
+
+The observed observed data likelihood:
+$$
+L(\lambda) = \prod_{i=1}^n (\frac{1}{\lambda})^{\delta_i}\exp(-\frac{y_i}{\lambda}) \\
+\log L(\lambda) = \sum_{i=1}^n -\delta_i \log(\lambda) - \frac{y_i}{\lambda}
+$$
+
+
+```{r}
+library(survival)
+
+time = veteran$time; censor_status = veteran$status
+```
+
+```{r message=FALSE}
+source(here::here("source", "4_EM.R"))
+```
+
+
+```{r}
+# estimate lambda
+EM_censored_exp(lambda_init = 100, time = time, censor_status = censor_status)
+```
+
+Fitted $\lambda$ value is 130.1711. I monitor convergence by check the change of log_likelihood.
+
+```{r message=FALSE}
+# confidence interval
+EM_boot(time = time, censor_status = censor_status, nboot = 1000, lambda_init = 100)
+```
+This confidence interval is from bootstrapping.
+
+```{r}
+aft_model <- survreg(Surv(time, status) ~ 1, 
+                     data = veteran, 
+                     dist = "weibull", 
+                     scale = 1)  
+
+# Display model summary
+summary(aft_model)
+```
+
+
+```{r}
+# lambda
+exp(aft_model$coefficients[1])
+exp(confint(aft_model))
+```
+
+EM algorithm and aft model have similar results in estimates but aft model has narrow confidence interval
+
+## Extra credit (up to 10 points)! Expected vs. observed information
+
+
+**Part A**: Show that the expected and observed information are equivalent for logistic regression
+
+From problem 1, we have Hessian matrix:
+$$
+H = \nabla^2 l(\beta) = -\sum_{i=1}^{n}(1 + \exp(- X_i^T\beta) \big)^{-2}\exp(- X_i^T\beta)X_i = -\sum_{i=1}^{n} \pi_i (1 - \pi_i) X_i X_i^T
+$$
+
+
+$$
+I(\beta) = - E[H] = E[-\sum_{i=1}^{n} \pi_i (1 - \pi_i) X_i X_i^T] = -\sum_{i=1}^{n} \pi_i (1 - \pi) X_i X_i^T
+$$
+where $\pi_i  = \frac{\exp(X_i^T\beta)}{1 + \exp(X_i^T\beta)}$ does not depend on $Y_i$
+
+$$
+I_n(\beta) = - H_{\beta = \hat{\beta}} = -\sum_{i=1}^{n} \pi_i (1 - \pi) X_i X_i^T
+$$
+
+**Part B**: Let's say you are instead performing probit regression, which is similar to logistic regression but with a different link function.  Specifically, probit regression uses a probit link: 
+
+
+$$\Phi^{-1}(Pr[Y_i = 1 |X_i]) = X_i^T\beta,$$
+
+where $\Phi^{-1}$ is inverse of the CDF for the standard normal distribution.  **Are the expected and observed information equivalent for probit regression?** Justify why or why not.
+
+
+Yes,  the Hessian matrix does not depend on $Y_i$, and we can achieve $I(\beta) = - E[H]  = - H$
+
+$$
+H(\beta)=-\sum_{i=1}^n X_i X_i^T \frac{\phi\left(X_i^T \beta\right)^2}{\Phi\left(X_i^T \beta\right)\left(1-\Phi\left(X_i^T \beta\right)\right)}
+$$
+
+
